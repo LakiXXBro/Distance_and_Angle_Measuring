@@ -44,17 +44,8 @@ with torch.no_grad():
 
     original_depth_map = original_prediction.cpu().numpy()
 
-# Normalize depth map for visualization
-original_depth_min = original_depth_map.min()
-original_depth_max = original_depth_map.max()
-normalized_original_depth = (original_depth_map - original_depth_min) / (original_depth_max - original_depth_min)
-original_depth_image = (normalized_original_depth * 255).astype(np.uint8)
-
-# Resize the depth map of the original image for display
-scale_percent = 50  # Resize scale (50% of the original size)
-width = int(original_depth_image.shape[1] * scale_percent / 100)
-height = int(original_depth_image.shape[0] * scale_percent / 100)
-resized_original_depth_image = cv2.resize(original_depth_image, (width, height), interpolation=cv2.INTER_AREA)
+# Assume we have already calibrated the camera and calculated the scaling factor
+S = 0.5  # Example scaling factor; replace with your actual calculated scaling factor
 
 # Step 5: Process each detected object to estimate depth and calculate distance
 for result in results:
@@ -65,7 +56,7 @@ for result in results:
         xmin, ymin, xmax, ymax = map(int, box.xyxy[0])  # Convert to integers
 
         # Crop the detected object from the original frame
-        roi = result.orig_img[ymin:ymax, xmin:xmax]
+        roi = original_img[ymin:ymax, xmin:xmax]
 
         # Convert cropped region to RGB (if needed)
         roi_rgb = cv2.cvtColor(roi, cv2.COLOR_BGR2RGB)
@@ -89,7 +80,10 @@ for result in results:
 
         # Calculate the median depth value for the ROI to minimize background influence
         median_depth = np.median(depth_map)
-        print(f"Estimated Relative Distance for Detected Object: {median_depth:.2f}")
+
+        # Calculate the absolute distance using the scaling factor
+        absolute_distance = S * median_depth
+        print(f"Estimated Absolute Distance for Detected Object: {absolute_distance:.2f} meters")
 
         # Normalize depth map for visualization
         depth_min = depth_map.min()
@@ -99,14 +93,14 @@ for result in results:
 
         # Resize the original camera feed for better display
         scale_percent = 50  # Resize scale (50% of the original size)
-        width = int(result.orig_img.shape[1] * scale_percent / 100)
-        height = int(result.orig_img.shape[0] * scale_percent / 100)
-        resized_orig_img = cv2.resize(result.orig_img, (width, height), interpolation=cv2.INTER_AREA)
+        width = int(original_img.shape[1] * scale_percent / 100)
+        height = int(original_img.shape[0] * scale_percent / 100)
+        resized_orig_img = cv2.resize(original_img, (width, height), interpolation=cv2.INTER_AREA)
 
         # Display the resized original camera feed, depth map, detected object, and resized depth map of the original image
         cv2.imshow('Camera Feed with Detection', resized_orig_img)
         cv2.imshow('Depth Map', depth_image)
         cv2.imshow('Detected Object', roi)
-        cv2.imshow('Depth Map of Original Image', resized_original_depth_image)
+        cv2.imshow('Depth Map of Original Image', original_depth_image)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
