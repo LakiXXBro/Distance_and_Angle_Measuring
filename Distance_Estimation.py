@@ -87,9 +87,9 @@ for result in results:
 
             depth_map = prediction.cpu().numpy()
 
-        # Calculate the average depth value for the ROI
-        average_depth = np.mean(depth_map)
-        print(f"Estimated Relative Distance for Detected Object: {average_depth:.2f}")
+        # Calculate the median depth value for the ROI to minimize background influence
+        median_depth = np.median(depth_map)
+        print(f"Estimated Relative Distance for Detected Object: {median_depth:.2f}")
 
         # Normalize depth map for visualization
         depth_min = depth_map.min()
