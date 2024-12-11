@@ -1,18 +1,19 @@
 import cv2
-from ultralytics import YOLO
+from ultralytics import YOLO  
 
 # Load YOLOv8 model
-model = YOLO("C:/Users/LakiBitz/Desktop/UnoCardDetection/runs/detect/train/weights/best.pt")
+model = YOLO("C:/Users/LakiBitz/Desktop/UnoUno/pythonProject2/runs/detect/train28/weights/best.pt")
 
-# Capture video from the webcam
+# Known real-world width of the target object
+REAL_WIDTH = 9  # cm
+
 cap = cv2.VideoCapture(0)
-
 while cap.isOpened():
     ret, frame = cap.read()
     if not ret:
         break
 
-    # Use YOLO to detect objects in the frame
+    # Use YOLO to detect objects in the raw frame
     results = model.predict(source=frame, save=False, conf=0.25)
 
     # Parse the results and draw bounding boxes
@@ -26,14 +27,24 @@ while cap.isOpened():
                 # Convert coordinates to integer
                 x_min, y_min, x_max, y_max = int(x_min), int(y_min), int(x_max), int(y_max)
 
-                # Draw bounding box and label
-                cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
-                cv2.putText(frame, class_name, (x_min, y_min - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                # Calculate bounding box width (in pixels)
+                perceived_width = x_max - x_min
 
-    # Display the video feed with detections
-    cv2.imshow('YOLOv8 Object Detection', frame)
+                # Calculate distance using the distance formula with a correction factor
+                if perceived_width > 0:  # Prevent division by zero
+                    focal_length = 535  # Estimated focal length
+                    distance = (REAL_WIDTH * focal_length) / perceived_width
+                    distance = round(distance, 2)
 
-    # Press 'x' to quit
+                    # Display the bounding box and distance on the frame
+                    cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
+                    cv2.putText(frame, f'{class_name}: {distance} cm', (x_min, y_min - 10),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
+    # Show the raw frame with the detection and distance estimation
+    cv2.imshow('YOLOv8 Object Detection with Distance Estimation', frame)
+
+    # Press 'q' to quit
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
