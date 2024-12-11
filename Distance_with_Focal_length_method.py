@@ -1,5 +1,5 @@
 import cv2
-from ultralytics import YOLO  
+from ultralytics import YOLO 
 
 # Load YOLOv8 model
 model = YOLO("C:/Users/LakiBitz/Desktop/UnoUno/pythonProject2/runs/detect/train28/weights/best.pt")
@@ -7,6 +7,10 @@ model = YOLO("C:/Users/LakiBitz/Desktop/UnoUno/pythonProject2/runs/detect/train2
 # Known real-world width of the target object
 REAL_WIDTH = 9  # cm
 
+# Correction factor to improve accuracy
+CORRECTION_FACTOR = 1
+
+# Capture video from the webcam
 cap = cv2.VideoCapture(0)
 while cap.isOpened():
     ret, frame = cap.read()
@@ -32,8 +36,9 @@ while cap.isOpened():
 
                 # Calculate distance using the distance formula with a correction factor
                 if perceived_width > 0:  # Prevent division by zero
-                    focal_length = 535  # Estimated focal length
+                    focal_length = 535  # Estimated focal length, adjust based on your camera
                     distance = (REAL_WIDTH * focal_length) / perceived_width
+                    distance *= CORRECTION_FACTOR  # Apply correction factor
                     distance = round(distance, 2)
 
                     # Display the bounding box and distance on the frame
