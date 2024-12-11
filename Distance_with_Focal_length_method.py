@@ -1,30 +1,30 @@
 import cv2
 import numpy as np
-from ultralytics import YOLO
+from ultralytics import YOLO  # Import YOLOv8 class from ultralytics library
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
 
 # Load YOLOv8 model
-model = YOLO("C:/Users/LakiBitz/Desktop/UnoCardDetection/runs/detect/train/weights/best.pt")
+model = YOLO("C:/Users/LakiBitz/Desktop/UnoCardDetection/runs/detect/train/weights/best.pt")  # Adjust the path to your model weights
 
-# Camera calibration results
+# Camera calibration results (replace with your own values from the calibration)
 camera_matrix = np.array([
     [1.06150525e+03, 0.00000000e+00, 9.61646225e+02],
     [0.00000000e+00, 1.06613057e+03, 5.21156498e+02],
     [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]
 ])
 
-dist_coeffs = np.array([[0.14101295, -0.30574447, 0.00225758, 0.0032847, 0.06745202]])
+dist_coeffs = np.array([[0, 0, 0, 0, 0]])
 
-# Known real-world width of the target object
+# Known real-world width of the target object (e.g., UNO card)
 REAL_WIDTH = 5.7  # cm
 
-# Correction factor to improve accurace
+# Correction factor to improve accuracy (based on empirical testing)
 CORRECTION_FACTOR = 0.6
 
 # Define the camera's horizontal field of view (in degrees)
-HORIZONTAL_FOV = 60
+HORIZONTAL_FOV = 60  # Adjust this based on your camera's specifications
 
 # Selected objects for tracking
 selected_objects = []
@@ -47,7 +47,7 @@ def process_camera_feed():
         frame_label.imgtk = imgtk
         frame_label.configure(image=imgtk)
 
-     
+        # Handle the UI update loop
         root.update_idletasks()
         root.update()
 
@@ -110,7 +110,7 @@ def start_detection():
                             # Add tracking info for display in the UI
                             tracking_display.append(f"{class_name}: {distance:6.2f} cm, {angle_from_center:6.2f} deg")
 
-        
+        # Ensure consistent spacing by padding the tracking info
         padded_display = [f"{line:<40}" for line in tracking_display]
         tracking_info.set("\n".join(padded_display))
 
@@ -121,7 +121,7 @@ def start_detection():
         frame_label.imgtk = imgtk
         frame_label.configure(image=imgtk)
 
-      
+        # Handle the UI update loop
         root.update()
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -144,12 +144,12 @@ def update_selected_objects():
     if red_card_8_var.get():
         selected_objects.append("RED_CARD_8")
 
-# main UI window
+# Create the main UI window
 root = tk.Tk()
 root.title("Object Detection and Tracking Interface")
 root.geometry("1200x600")  # Set fixed size of the window
 
-#UI layout
+# Create a frame for the UI layout
 main_frame = tk.Frame(root)
 main_frame.pack(fill=tk.BOTH, expand=True)
 
