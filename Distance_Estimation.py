@@ -1,11 +1,10 @@
 import cv2
-import numpy as np
 import torch
 from ultralytics import YOLO
 from PIL import Image
 from torchvision import transforms
 
-# Load YOLO model
+# Loading YOLO model
 def load_yolo_model(model_path):
     try:
         model = YOLO(model_path)
@@ -14,7 +13,7 @@ def load_yolo_model(model_path):
         print(f"Error loading YOLO model: {e}")
         return None
 
-# Load MiDaS model
+# Loading MiDaS model
 def load_midas_model():
     try:
         midas = torch.hub.load('intel-isl/MiDaS', 'MiDaS_small', pretrained=True)
@@ -27,12 +26,12 @@ def load_midas_model():
 # Define the transformation for MiDaS
 def get_midas_transform():
     return transforms.Compose([
-        transforms.Resize((384, 384)),  # Resize to the input size of MiDaS
+        transforms.Resize((384, 384)),
         transforms.ToTensor(),  # Convert to tensor
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])  # Normalize
     ])
 
-# Generate depth map using MiDaS
+# Generating depth map using MiDaS
 def generate_depth_map(midas, transform, image):
     try:
         image_pil = Image.fromarray(image)
@@ -43,27 +42,14 @@ def generate_depth_map(midas, transform, image):
             depth_map = torch.nn.functional.interpolate(depth_map.unsqueeze(1), size=image.shape[:2], mode='bicubic',
                                                         align_corners=False).squeeze()
             depth_map = depth_map.cpu().numpy()
-
-        # Display the depth map
-        depth_min = depth_map.min()
-        depth_max = depth_map.max()
-        normalized_depth = (depth_map - depth_min) / (depth_max - depth_min)
-        depth_image = (normalized_depth * 255).astype(np.uint8)
-        cv2.imshow('Depth Map', depth_image)
-        cv2.waitKey(1)
-        
-        # Print depth map matrix values
-        print("Depth Map Matrix:")
-        print(depth_map)
-        
         return depth_map
     except Exception as e:
         print(f"Error generating depth map: {e}")
         return None
 
-# Calculate distance for each detected object
+# Calculating distance for each detected object
 def calculate_distances(depth_map, results, image):
-    depth_scale = 0.001  # Adjust based on your camera specifications
+    depth_scale = 1000
     distances = []
 
     for result in results:
@@ -75,7 +61,7 @@ def calculate_distances(depth_map, results, image):
             centroid_x = int((x_min + x_max) / 2)
             centroid_y = int((y_min + y_max) / 2)
 
-            # Extract depth value
+            # Getting the depth value
             if 0 <= centroid_y < depth_map.shape[0] and 0 <= centroid_x < depth_map.shape[1]:
                 depth_value = depth_map[centroid_y, centroid_x]
                 distance = (depth_value * depth_scale) if depth_value > 0 else 0
@@ -86,7 +72,7 @@ def calculate_distances(depth_map, results, image):
                             0.5, (255, 255, 255), 2)
                 print(f"Depth value at centroid: {depth_value}")
 
-                # Draw the centroid
+                # Draw the centroid to see the centre
                 cv2.circle(image, (centroid_x, centroid_y), 5, (0, 255, 0), -1)
                 cv2.putText(image, f"Centroid: ({centroid_x}, {centroid_y})", (centroid_x + 10, centroid_y),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
@@ -129,7 +115,7 @@ def main(yolo_model_path):
     cap.release()
     cv2.destroyAllWindows()
 
-# Entry point
+
 if __name__ == "__main__":
     yolo_model_path = "C:/Users/LakiBitz/Desktop/UnoCardDetection/runs/detect/train/weights/best.pt"  # Your YOLO model path
     main(yolo_model_path)
