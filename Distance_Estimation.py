@@ -1,7 +1,17 @@
 import cv2
 import torch
+from ultralytics import YOLO
 from PIL import Image
 from torchvision import transforms
+
+# Loading YOLO model
+def load_yolo_model(model_path):
+    try:
+        model = YOLO(model_path)
+        return model
+    except Exception as e:
+        print(f"Error loading YOLO model: {e}")
+        return None
 
 # Loading MiDaS model
 def load_midas_model():
@@ -37,8 +47,44 @@ def generate_depth_map(midas, transform, image):
         print(f"Error generating depth map: {e}")
         return None
 
+# Calculating distance for each detected object
+def calculate_distances(depth_map, results, image):
+    depth_scale = 1000
+    distances = []
+
+    for result in results:
+        boxes = result.boxes
+        for box in boxes.data:
+            x_min, y_min, x_max, y_max, confidence = box[:5].tolist()
+            class_id = int(box[5].item())
+
+            centroid_x = int((x_min + x_max) / 2)
+            centroid_y = int((y_min + y_max) / 2)
+
+            # Getting the depth value
+            if 0 <= centroid_y < depth_map.shape[0] and 0 <= centroid_x < depth_map.shape[1]:
+                depth_value = depth_map[centroid_y, centroid_x]
+                distance = (depth_value * depth_scale) if depth_value > 0 else 0
+                distances.append((distance, (x_min, y_min, x_max, y_max)))
+
+                # Annotate image with distance
+                cv2.putText(image, f"Distance: {distance:.2f} m", (int(x_min), int(y_min - 10)), cv2.FONT_HERSHEY_SIMPLEX,
+                            0.5, (255, 255, 255), 2)
+                print(f"Depth value at centroid: {depth_value}")
+
+                # Draw the centroid to see the centre
+                cv2.circle(image, (centroid_x, centroid_y), 5, (0, 255, 0), -1)
+                cv2.putText(image, f"Centroid: ({centroid_x}, {centroid_y})", (centroid_x + 10, centroid_y),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+
+    return distances
+
 # Main function
-def main():
+def main(yolo_model_path):
+    yolo_model = load_yolo_model(yolo_model_path)
+    if yolo_model is None:
+        return
+
     midas = load_midas_model()
     if midas is None:
         return
@@ -54,18 +100,16 @@ def main():
             print("Error: Could not read frame from webcam.")
             break
 
+        results = yolo_model(image)  # Perform object detection
         depth_map = generate_depth_map(midas, transform, image)
         if depth_map is None:
             print("Error: Depth map generation failed.")
             continue
 
-        # Normalize depth map for display
-        depth_map_display = cv2.normalize(depth_map, None, 0, 255, cv2.NORM_MINMAX).astype('uint8')
-        depth_map_colored = cv2.applyColorMap(depth_map_display, cv2.COLORMAP_JET)
+        distances = calculate_distances(depth_map, results, image)
 
-        # Display the depth map
-        cv2.imshow('Depth Map', depth_map_colored)
-        if cv2.waitKey(1) & 0xFF == ord('q'):  # Press 'q' to exit
+        cv2.imshow('Detected Objects with Distances', image)
+        if cv2.waitKey(1) & 0xFF == ord('x'):  # Press 'x' to exit
             break
 
     cap.release()
@@ -73,4 +117,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    yolo_model_path = "C:/Users/LakiBitz/Desktop/UnoCardDetection/runs/detect/train/weights/best.pt"  #YOLO model path
+    main(yolo_model_path)
