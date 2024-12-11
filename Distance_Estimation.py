@@ -11,7 +11,7 @@ model = YOLO("C:/Users/LakiBitz/Desktop/UnoCardDetection/runs/detect/train/weigh
 results = model.predict(source=0, show=True, conf=0.7)  # Replace '0' with an image path for static images
 
 # Step 3: Load MiDaS model
-model_type = "DPT_small"  # Options: "DPT_Large", "DPT_Hybrid", "MiDaS_small"
+model_type = "DPT_Large"  # Options: "DPT_Large", "DPT_Hybrid", "MiDaS_small"
 midas = torch.hub.load("intel-isl/MiDaS", model_type)
 
 # Move MiDaS to GPU if available
