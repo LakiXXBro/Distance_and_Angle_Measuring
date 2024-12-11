@@ -4,6 +4,7 @@ from ultralytics import YOLO
 
 # Load YOLOv8 model
 model = YOLO("C:/Users/LakiBitz/Desktop/UnoCardDetection/runs/detect/train/weights/best.pt")
+
 # Camera calibration results
 camera_matrix = np.array([
     [1.06150525e+03, 0.00000000e+00, 9.61646225e+02],
@@ -53,13 +54,23 @@ while cap.isOpened():
                     distance *= CORRECTION_FACTOR  # Apply correction factor
                     distance = round(distance, 2)
 
-                    # Display the bounding box and distance on the frame
+                    # Calculate the center point of the bounding box
+                    object_center_x = (x_min + x_max) / 2
+
+                    # Calculate the angle within the camera's field of view
+                    frame_width = undistorted_frame.shape[1]
+                    fov = 180
+                    angle_per_pixel = fov / frame_width
+                    angle_from_center = (object_center_x - frame_width / 2) * angle_per_pixel
+                    angle_from_center = round(angle_from_center, 2)
+
+                    # Display the bounding box, distance, and angle on the frame
                     cv2.rectangle(undistorted_frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
-                    cv2.putText(undistorted_frame, f'{class_name}: {distance} cm', (x_min, y_min - 10),
+                    cv2.putText(undistorted_frame, f'{class_name}: {distance} cm, {angle_from_center} deg', (x_min, y_min - 10),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-    # Show the undistorted frame with the detection and distance estimation
-    cv2.imshow('YOLOv8 Object Detection with Distance Estimation', undistorted_frame)
+    # Show the undistorted frame with the detection, distance estimation, and angle
+    cv2.imshow('YOLOv8 Object Detection with Distance and Angle Estimation', undistorted_frame)
 
     # Press 'q' to quit
     if cv2.waitKey(1) & 0xFF == ord('q'):
