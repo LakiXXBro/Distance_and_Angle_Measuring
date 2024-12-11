@@ -1,14 +1,23 @@
 import cv2
-from ultralytics import YOLO 
+import numpy as np
+from ultralytics import YOLO
 
 # Load YOLOv8 model
-model = YOLO("C:/Users/LakiBitz/Desktop/UnoUno/pythonProject2/runs/detect/train28/weights/best.pt")
+model = YOLO("C:/Users/LakiBitz/Desktop/UnoCardDetection/runs/detect/train/weights/best.pt")
+# Camera calibration results
+camera_matrix = np.array([
+    [1.06150525e+03, 0.00000000e+00, 9.61646225e+02],
+    [0.00000000e+00, 1.06613057e+03, 5.21156498e+02],
+    [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]
+])
+
+dist_coeffs = np.array([[0.14101295, -0.30574447, 0.00225758, 0.0032847, 0.06745202]])
 
 # Known real-world width of the target object
-REAL_WIDTH = 9  # cm
+REAL_WIDTH = 5.7  # cm
 
 # Correction factor to improve accuracy
-CORRECTION_FACTOR = 1
+CORRECTION_FACTOR = 0.6
 
 # Capture video from the webcam
 cap = cv2.VideoCapture(0)
@@ -17,8 +26,11 @@ while cap.isOpened():
     if not ret:
         break
 
-    # Use YOLO to detect objects in the raw frame
-    results = model.predict(source=frame, save=False, conf=0.25)
+    # Undistort the frame using the camera matrix and distortion coefficients
+    undistorted_frame = cv2.undistort(frame, camera_matrix, dist_coeffs)
+
+    # Use YOLO to detect objects in the undistorted frame
+    results = model.predict(source=undistorted_frame, save=False, conf=0.25)
 
     # Parse the results and draw bounding boxes
     for result in results:
@@ -36,18 +48,18 @@ while cap.isOpened():
 
                 # Calculate distance using the distance formula with a correction factor
                 if perceived_width > 0:  # Prevent division by zero
-                    focal_length = 535  # Estimated focal length, adjust based on your camera
+                    focal_length = (camera_matrix[0][0] + camera_matrix[1][1]) / 2  # Average of fx and fy
                     distance = (REAL_WIDTH * focal_length) / perceived_width
                     distance *= CORRECTION_FACTOR  # Apply correction factor
                     distance = round(distance, 2)
 
                     # Display the bounding box and distance on the frame
-                    cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
-                    cv2.putText(frame, f'{class_name}: {distance} cm', (x_min, y_min - 10),
+                    cv2.rectangle(undistorted_frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
+                    cv2.putText(undistorted_frame, f'{class_name}: {distance} cm', (x_min, y_min - 10),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-    # Show the raw frame with the detection and distance estimation
-    cv2.imshow('YOLOv8 Object Detection with Distance Estimation', frame)
+    # Show the undistorted frame with the detection and distance estimation
+    cv2.imshow('YOLOv8 Object Detection with Distance Estimation', undistorted_frame)
 
     # Press 'q' to quit
     if cv2.waitKey(1) & 0xFF == ord('q'):
