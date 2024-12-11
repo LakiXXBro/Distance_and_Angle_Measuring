@@ -1,121 +1,112 @@
-import cv2
 import torch
+import cv2
+import numpy as np
+from torchvision.transforms import Compose, Resize, ToTensor, Normalize
 from ultralytics import YOLO
-from PIL import Image
-from torchvision import transforms
 
-# Loading YOLO model
-def load_yolo_model(model_path):
-    try:
-        model = YOLO(model_path)
-        return model
-    except Exception as e:
-        print(f"Error loading YOLO model: {e}")
-        return None
+# Step 1: Load YOLOv8 model
+model = YOLO("C:/Users/LakiBitz/Desktop/UnoCardDetection/runs/detect/train/weights/best.pt")
 
-# Loading MiDaS model
-def load_midas_model():
-    try:
-        midas = torch.hub.load('intel-isl/MiDaS', 'MiDaS_small', pretrained=True)
-        midas.eval()
-        return midas
-    except Exception as e:
-        print(f"Error loading MiDaS model: {e}")
-        return None
+# Step 2: Perform object detection (using webcam or an image)
+results = model.predict(source=0, show=True, conf=0.7)  # Replace '0' with an image path for static images
 
-# Define the transformation for MiDaS
-def get_midas_transform():
-    return transforms.Compose([
-        transforms.Resize((384, 384)),
-        transforms.ToTensor(),  # Convert to tensor
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])  # Normalize
-    ])
+# Step 3: Load MiDaS model
+model_type = "DPT_small"  # Options: "DPT_Large", "DPT_Hybrid", "MiDaS_small"
+midas = torch.hub.load("intel-isl/MiDaS", model_type)
 
-# Generating depth map using MiDaS
-def generate_depth_map(midas, transform, image):
-    try:
-        image_pil = Image.fromarray(image)
-        img_batch = transform(image_pil).unsqueeze(0).to('cuda')  # Add batch dimension and move to GPU
+# Move MiDaS to GPU if available
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+midas.to(device)
+midas.eval()
 
+# Load transforms to preprocess the image for MiDaS
+midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms")
+if model_type in ["DPT_Large", "DPT_Hybrid"]:
+    transform = midas_transforms.dpt_transform
+else:
+    transform = midas_transforms.small_transform
+
+# Step 4: Estimate depth for the original image
+original_img = results[0].orig_img
+original_rgb = cv2.cvtColor(original_img, cv2.COLOR_BGR2RGB)
+input_batch = transform(original_rgb).to(device)
+
+with torch.no_grad():
+    original_prediction = midas(input_batch)
+
+    # Resize the depth map to match the original image size
+    original_prediction = torch.nn.functional.interpolate(
+        original_prediction.unsqueeze(1),
+        size=original_rgb.shape[:2],
+        mode="bicubic",
+        align_corners=False,
+    ).squeeze()
+
+    original_depth_map = original_prediction.cpu().numpy()
+
+# Normalize depth map for visualization
+original_depth_min = original_depth_map.min()
+original_depth_max = original_depth_map.max()
+normalized_original_depth = (original_depth_map - original_depth_min) / (original_depth_max - original_depth_min)
+original_depth_image = (normalized_original_depth * 255).astype(np.uint8)
+
+# Resize the depth map of the original image for display
+scale_percent = 50  # Resize scale (50% of the original size)
+width = int(original_depth_image.shape[1] * scale_percent / 100)
+height = int(original_depth_image.shape[0] * scale_percent / 100)
+resized_original_depth_image = cv2.resize(original_depth_image, (width, height), interpolation=cv2.INTER_AREA)
+
+# Step 5: Process each detected object to estimate depth and calculate distance
+for result in results:
+    boxes = result.boxes  # Get bounding boxes for detected objects
+
+    for box in boxes:
+        # Extract bounding box coordinates
+        xmin, ymin, xmax, ymax = map(int, box.xyxy[0])  # Convert to integers
+
+        # Crop the detected object from the original frame
+        roi = result.orig_img[ymin:ymax, xmin:xmax]
+
+        # Convert cropped region to RGB (if needed)
+        roi_rgb = cv2.cvtColor(roi, cv2.COLOR_BGR2RGB)
+
+        # Apply the MiDaS transform to the cropped ROI
+        input_batch = transform(roi_rgb).to(device)
+
+        # Predict depth for the cropped ROI
         with torch.no_grad():
-            depth_map = midas(img_batch)
-            depth_map = torch.nn.functional.interpolate(depth_map.unsqueeze(1), size=image.shape[:2], mode='bicubic',
-                                                        align_corners=False).squeeze()
-            depth_map = depth_map.cpu().numpy()
-        return depth_map
-    except Exception as e:
-        print(f"Error generating depth map: {e}")
-        return None
+            prediction = midas(input_batch)
 
-# Calculating distance for each detected object
-def calculate_distances(depth_map, results, image):
-    depth_scale = 1000
-    distances = []
+            # Resize the depth map to match the original ROI size
+            prediction = torch.nn.functional.interpolate(
+                prediction.unsqueeze(1),
+                size=roi_rgb.shape[:2],
+                mode="bicubic",
+                align_corners=False,
+            ).squeeze()
 
-    for result in results:
-        boxes = result.boxes
-        for box in boxes.data:
-            x_min, y_min, x_max, y_max, confidence = box[:5].tolist()
-            class_id = int(box[5].item())
+            depth_map = prediction.cpu().numpy()
 
-            centroid_x = int((x_min + x_max) / 2)
-            centroid_y = int((y_min + y_max) / 2)
+        # Calculate the average depth value for the ROI
+        average_depth = np.mean(depth_map)
+        print(f"Estimated Relative Distance for Detected Object: {average_depth:.2f}")
 
-            # Getting the depth value
-            if 0 <= centroid_y < depth_map.shape[0] and 0 <= centroid_x < depth_map.shape[1]:
-                depth_value = depth_map[centroid_y, centroid_x]
-                distance = (depth_value * depth_scale) if depth_value > 0 else 0
-                distances.append((distance, (x_min, y_min, x_max, y_max)))
+        # Normalize depth map for visualization
+        depth_min = depth_map.min()
+        depth_max = depth_map.max()
+        normalized_depth = (depth_map - depth_min) / (depth_max - depth_min)
+        depth_image = (normalized_depth * 255).astype(np.uint8)
 
-                # Annotate image with distance
-                cv2.putText(image, f"Distance: {distance:.2f} m", (int(x_min), int(y_min - 10)), cv2.FONT_HERSHEY_SIMPLEX,
-                            0.5, (255, 255, 255), 2)
-                print(f"Depth value at centroid: {depth_value}")
+        # Resize the original camera feed for better display
+        scale_percent = 50  # Resize scale (50% of the original size)
+        width = int(result.orig_img.shape[1] * scale_percent / 100)
+        height = int(result.orig_img.shape[0] * scale_percent / 100)
+        resized_orig_img = cv2.resize(result.orig_img, (width, height), interpolation=cv2.INTER_AREA)
 
-                # Draw the centroid to see the centre
-                cv2.circle(image, (centroid_x, centroid_y), 5, (0, 255, 0), -1)
-                cv2.putText(image, f"Centroid: ({centroid_x}, {centroid_y})", (centroid_x + 10, centroid_y),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
-
-    return distances
-
-# Main function
-def main(yolo_model_path):
-    yolo_model = load_yolo_model(yolo_model_path)
-    if yolo_model is None:
-        return
-
-    midas = load_midas_model()
-    if midas is None:
-        return
-
-    transform = get_midas_transform()
-    midas.to('cuda')  # Move MiDaS model to GPU if available
-
-    # Start webcam capture
-    cap = cv2.VideoCapture(0)  # 0 for the default camera
-    while True:
-        success, image = cap.read()
-        if not success:
-            print("Error: Could not read frame from webcam.")
-            break
-
-        results = yolo_model(image)  # Perform object detection
-        depth_map = generate_depth_map(midas, transform, image)
-        if depth_map is None:
-            print("Error: Depth map generation failed.")
-            continue
-
-        distances = calculate_distances(depth_map, results, image)
-
-        cv2.imshow('Detected Objects with Distances', image)
-        if cv2.waitKey(1) & 0xFF == ord('x'):  # Press 'x' to exit
-            break
-
-    cap.release()
-    cv2.destroyAllWindows()
-
-
-if __name__ == "__main__":
-    yolo_model_path = "C:/Users/LakiBitz/Desktop/UnoCardDetection/runs/detect/train/weights/best.pt"  #YOLO model path
-    main(yolo_model_path)
+        # Display the resized original camera feed, depth map, detected object, and resized depth map of the original image
+        cv2.imshow('Camera Feed with Detection', resized_orig_img)
+        cv2.imshow('Depth Map', depth_image)
+        cv2.imshow('Detected Object', roi)
+        cv2.imshow('Depth Map of Original Image', resized_original_depth_image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
