@@ -1,14 +1,14 @@
 import cv2
 import numpy as np
-from ultralytics import YOLO  # Import YOLOv8 class from ultralytics library
+from ultralytics import YOLO 
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
 
 # Load YOLOv8 model
-model = YOLO("C:/Users/LakiBitz/Desktop/UnoCardDetection/runs/detect/train/weights/best.pt")  # Adjust the path to your model weights
+model = YOLO("C:/Users/LakiBitz/Desktop/UnoCardDetection/runs/detect/train/weights/best.pt") 
 
-# Camera calibration results (replace with your own values from the calibration)
+# Camera calibration results
 camera_matrix = np.array([
     [1.06150525e+03, 0.00000000e+00, 9.61646225e+02],
     [0.00000000e+00, 1.06613057e+03, 5.21156498e+02],
@@ -17,10 +17,16 @@ camera_matrix = np.array([
 
 dist_coeffs = np.array([[0, 0, 0, 0, 0]])
 
-# Known real-world width of the target object (e.g., UNO card)
-REAL_WIDTH = 5.7  # cm
+# Known real-world widths of the target objects
+REAL_WIDTHS = {
+    "RED_CARD_3": 5.7,
+    "YELLOW_CARD_0": 6.7,
+    "BLUE_CARD_7": 7.7,
+    "GREEN_CARD_5": 50,
+    "RED_CARD_8": 9.7
+}
 
-# Correction factor to improve accuracy (based on empirical testing)
+# Correction factor to improve accuracy
 CORRECTION_FACTOR = 0.6
 
 # Define the camera's horizontal field of view (in degrees)
@@ -88,9 +94,10 @@ def start_detection():
                         perceived_width = x_max - x_min
 
                         # Calculate distance using the distance formula with a correction factor
-                        if perceived_width > 0:  # Prevent division by zero
+                        if perceived_width > 0 and class_name in REAL_WIDTHS:  # Prevent division by zero and check for valid class
                             focal_length = (camera_matrix[0][0] + camera_matrix[1][1]) / 2  # Average of fx and fy
-                            distance = (REAL_WIDTH * focal_length) / perceived_width
+                            real_width = REAL_WIDTHS[class_name]  # Get the real width for the detected class
+                            distance = (real_width * focal_length) / perceived_width
                             distance *= CORRECTION_FACTOR  # Apply correction factor
                             distance = round(distance, 2)
 
@@ -121,7 +128,6 @@ def start_detection():
         frame_label.imgtk = imgtk
         frame_label.configure(image=imgtk)
 
-        # Handle the UI update loop
         root.update()
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -173,7 +179,7 @@ green_card_var = tk.BooleanVar()
 red_card_8_var = tk.BooleanVar()
 tracking_info = tk.StringVar()
 
-# Create UI elements in the left frame
+#UI elements in the left frame
 tk.Label(left_frame, text="Select Objects to Track:").pack(anchor=tk.W)
 
 red_card_checkbox = tk.Checkbutton(left_frame, text="RED_CARD_3", variable=red_card_var, command=update_selected_objects)
