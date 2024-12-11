@@ -64,11 +64,13 @@ for result in results:
         # Calculate the median depth value for the detected object
         D_relative = np.median(depth_map)
 
-        # Invert the relative depth value
-        if D_relative > 0:
-            D_relative_inverted = 1 / D_relative
-        else:
-            D_relative_inverted = float('inf')  # Handle potential division by zero
+        # Ensure D_relative is valid and use it directly for distance calculation
+        if D_relative <= 0:
+            print("Invalid depth value detected, skipping this object.")
+            continue
+
+        # Invert the relative depth value to make closer objects have higher values
+        D_relative_inverted = 1.0 / D_relative
 
         # Calculate the absolute distance using the scaling factor
         D_abs = S * D_relative_inverted
