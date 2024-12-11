@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from ultralytics import YOLO  
+from ultralytics import YOLO
 
 # Load YOLOv8 model
 model = YOLO("C:/Users/LakiBitz/Desktop/UnoCardDetection/runs/detect/train/weights/best.pt")
@@ -12,7 +12,7 @@ camera_matrix = np.array([
     [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]
 ])
 
-dist_coeffs = np.array([[0.14101295, -0.30574447, 0.00225758, 0.0032847, 0.06745202]])
+dist_coeffs = np.array([[0, 0, 0, 0, 0]])
 
 # Known real-world width of the target object
 REAL_WIDTH = 5.7  # cm
@@ -21,7 +21,7 @@ REAL_WIDTH = 5.7  # cm
 CORRECTION_FACTOR = 0.6
 
 # Define the camera's horizontal field of view
-HORIZONTAL_FOV = 60 
+HORIZONTAL_FOV = 60
 
 # Capture video from the webcam
 cap = cv2.VideoCapture(0)
@@ -55,7 +55,7 @@ while cap.isOpened():
                     focal_length = (camera_matrix[0][0] + camera_matrix[1][1]) / 2  # Average of fx and fy
                     distance = (REAL_WIDTH * focal_length) / perceived_width
                     distance *= CORRECTION_FACTOR  # Apply correction factor
-                    distance = round(distance, 1)
+                    distance = round(distance, 2)
 
                     # Calculate the center point of the bounding box
                     object_center_x = (x_min + x_max) / 2
