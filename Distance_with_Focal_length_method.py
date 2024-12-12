@@ -9,13 +9,11 @@ from PIL import Image, ImageTk
 model = YOLO("C:/Users/LakiBitz/Desktop/UnoCardDetection/runs/detect/train/weights/best.pt")  # Adjust the path to your model weights
 
 # Camera calibration results (replace with your own values from the calibration)
-camera_matrix = np.array([
-    [1.06150525e+03, 0.00000000e+00, 9.61646225e+02],
-    [0.00000000e+00, 1.06613057e+03, 5.21156498e+02],
-    [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]
-])
+camera_matrix = np.array([[1.63697859e+03, 0.00000000e+00, 9.50278068e+02],
+                          [0.00000000e+00, 1.63623452e+03, 5.21825081e+02],
+                          [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]])
 
-dist_coeffs = np.array([[0, 0, 0, 0, 0]])
+dist_coeffs = np.array([[4.31059459e-01, -2.37940632e+00, -6.04646635e-04, -1.24375097e-03, 3.48162996e+00]])
 
 # Known real-world widths of the target objects
 REAL_WIDTHS = {
