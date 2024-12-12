@@ -28,7 +28,7 @@ CLASS_WIDTHS = {
 CORRECTION_FACTOR = 0.6
 
 # Define the camera's horizontal field of view (in degrees)
-HORIZONTAL_FOV = 60 
+HORIZONTAL_FOV = 70 
 
 # Selected objects for tracking
 selected_objects = []
