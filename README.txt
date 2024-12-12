@@ -96,6 +96,12 @@ Focused on research, exploring different methods to optimize the system.
 Contributed to data labeling for training the model.
 Collaborated on program development.
 
+
+Additional information about the files in this repository
+Cam_calibration.py is used for camera calibration using checkerboard
+Focal_length_calculation.py is used to calculate the focal length using known width and known distance of an object
+Object_detection_test.py is used to test whether the YOLO model is working properly
+
 Credits
 This program uses the YOLO model provided by Ultralytics and leverages OpenCV for video processing.
 
