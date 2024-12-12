@@ -1,14 +1,14 @@
 import cv2
 import numpy as np
-from ultralytics import YOLO  # Import YOLOv8 class from ultralytics library
+from ultralytics import YOLO 
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
 
 # Load YOLOv8 model
-model = YOLO("C:/Users/LakiBitz/Desktop/UnoCardDetection/runs/detect/train/weights/best.pt")  # Adjust the path to your model weights
+model = YOLO("C:/Users/LakiBitz/Desktop/UnoUno/pythonProject2/runs/detect/train27/weights/best.pt") 
 
-# Camera calibration results (replace with your own values from the calibration)
+# Camera calibration results
 camera_matrix = np.array([[1.63697859e+03, 0.00000000e+00, 9.50278068e+02],
                           [0.00000000e+00, 1.63623452e+03, 5.21825081e+02],
                           [0.00000000e+00, 0.00000000e+00, 1.00000000e+00]])
@@ -16,20 +16,19 @@ camera_matrix = np.array([[1.63697859e+03, 0.00000000e+00, 9.50278068e+02],
 dist_coeffs = np.array([[4.31059459e-01, -2.37940632e+00, -6.04646635e-04, -1.24375097e-03, 3.48162996e+00]])
 
 # Known real-world widths of the target objects
-REAL_WIDTHS = {
-    "RED_CARD_3": 5.7,
-    "YELLOW_CARD_0": 6.7,
-    "BLUE_CARD_7": 7.7,
-    "GREEN_CARD_5": 8.7,
-    "RED_CARD_8": 9.7,
-    "RED_CARD_6": 5.7  # Width for verification card
+CLASS_WIDTHS = {
+    "Iphone_X": 8.9,
+    "Iphone_6": 8.6,
+    "Iphone_SE": 8.0,
+    "Iphone_15": 9.0,
+    "Iphone_13": 8.95,
 }
 
-# Correction factor to improve accuracy (based on empirical testing)
+# Correction factor to improve accuracy
 CORRECTION_FACTOR = 0.6
 
 # Define the camera's horizontal field of view (in degrees)
-HORIZONTAL_FOV = 60  # Adjust this based on your camera's specifications
+HORIZONTAL_FOV = 60 
 
 # Selected objects for tracking
 selected_objects = []
@@ -61,7 +60,7 @@ def verification_with_camera():
                     class_name = model.names[int(box.cls.cpu().numpy())]
 
                     # Check if the detected class is the verification card
-                    if class_name == "RED_CARD_6":
+                    if class_name == ACCESS_ID:
                         verification_passed = True
                         cap.release()
                         show_main_page()
@@ -191,7 +190,7 @@ def start_detection():
         frame_label.imgtk = imgtk
         frame_label.configure(image=imgtk)
 
-        # Handle the UI update loop
+   
         root.update()
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -204,15 +203,15 @@ def update_selected_objects():
     global selected_objects
     selected_objects = []
     if red_card_var.get():
-        selected_objects.append("RED_CARD_3")
+        selected_objects.append("Iphone_X")
     if yellow_card_var.get():
-        selected_objects.append("YELLOW_CARD_0")
+        selected_objects.append("Iphone_6"")
     if blue_card_var.get():
-        selected_objects.append("BLUE_CARD_7")
+        selected_objects.append("Iphone_SE")
     if green_card_var.get():
-        selected_objects.append("GREEN_CARD_5")
+        selected_objects.append("Iphone_15")
     if red_card_8_var.get():
-        selected_objects.append("RED_CARD_8")
+        selected_objects.append("Iphone_13")
 
 # Function to show the main page after verification
 def show_main_page():
