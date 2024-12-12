@@ -58,7 +58,7 @@ Clone or download the repository containing the script.
 
 Step 2: Run the Script
 Execute the script:
-python object_detection_program.py
+python Distance_with_Focal_length_method.py
 
 Step 3: Verify Access
 ID Card Verification:
