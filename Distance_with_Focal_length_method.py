@@ -8,7 +8,7 @@ from PIL import Image, ImageTk  # For image handling in Tkinter
 from tkinter import messagebox  # For displaying message boxes
 
 # Load the YOLO model with the specified weight file
-model = YOLO("C:/Users/LakiBitz/Desktop/UnoUno/pythonProject2/runs/detect/Iphone_Box_Dataset/weights/best.pt")
+model = YOLO("IphoneBox_Dataset/weights/best.pt")
 
 # Camera calibration parameters
 CAMERA_MATRIX = np.array([[1.63697859e+03, 0.00000000e+00, 9.50278068e+02],
