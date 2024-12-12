@@ -117,5 +117,5 @@ def main(yolo_model_path):
 
 
 if __name__ == "__main__":
-    yolo_model_path = "C:/Users/LakiBitz/Desktop/UnoCardDetection/runs/detect/train/weights/best.pt"  # Your YOLO model path
+    yolo_model_path = "detect/train/weights/best.pt"
     main(yolo_model_path)
